@@ -11,7 +11,7 @@ pub fn simulate(settings: Settings) {
     display::init(&settings);
     display::show(&agents, &settings);
 
-    for _ in 0..settings.simulation_steps {
+    for _ in 0..settings.length {
         // all agents take an action
         agents = agents
             .into_iter()
@@ -26,10 +26,8 @@ pub fn simulate(settings: Settings) {
 
         display::show(&agents, &settings);
 
-        if settings.simulation_speed > 0 {
-            thread::sleep(Duration::from_millis(
-                1000 / settings.simulation_speed as u64,
-            ))
+        if settings.speed > 0 {
+            thread::sleep(Duration::from_millis(1000 / settings.speed as u64))
         }
     }
 }
@@ -141,7 +139,7 @@ fn create_agents(settings: &Settings) -> Vec<Agent> {
     let mut rng = rand::thread_rng();
 
     // create a Vector of agents
-    let mut agents: Vec<_> = (0..settings.number_of_agents as usize)
+    let mut agents: Vec<_> = (0..settings.agents as usize)
         .map(|id| Agent {
             id,
             position: Position {
