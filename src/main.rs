@@ -6,6 +6,7 @@ pub struct Settings {
     width: u32,
     height: u32,
     number_of_agents: u32,
+    simulation_steps: u32,
 }
 
 fn main() {
@@ -13,5 +14,6 @@ fn main() {
         width: 10,
         height: 10,
         number_of_agents: 10,
+        simulation_steps: 10,
     })
 }
