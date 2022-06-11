@@ -2,6 +2,8 @@ use super::display;
 use super::Settings;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
+use std::thread;
+use std::time::Duration;
 
 pub fn simulate(settings: Settings) {
     let mut agents = create_agents(&settings);
@@ -23,6 +25,12 @@ pub fn simulate(settings: Settings) {
         agents = make_agents_tag(agents);
 
         display::show(&agents, &settings);
+
+        if settings.simulation_speed > 0 {
+            thread::sleep(Duration::from_millis(
+                1000 / settings.simulation_speed as u64,
+            ))
+        }
     }
 }
 #[derive(Debug, Clone, Copy)]
