@@ -2,14 +2,21 @@ use super::Settings;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Position {
     x: u32,
     y: u32,
 }
 
+impl Position {
+    fn distance(&self, other: &Self) -> u32 {
+        self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
+    }
+}
+
 #[derive(Debug)]
 struct Agent {
+    id: usize, // id also denotes position in the vector
     position: Position,
     is_it: bool,
     x_bound: u32, // upper bound, lower bound is 0
@@ -83,10 +90,30 @@ pub fn simulate(settings: Settings) {
             .collect();
 
         // check whether the tagging agent is close enough to any other agent
+        agents = make_agents_tag(agents);
     }
     for agent in &agents {
         println!("{:?}", agent);
     }
+}
+
+fn make_agents_tag(mut agents: Vec<Agent>) -> Vec<Agent> {
+    let (tagging_agent_id, tagging_agent_position) = agents
+        .iter()
+        .find(|agent| agent.is_it)
+        .map(|agent| (agent.id, agent.position))
+        .expect("Did not find an agent that's 'It'");
+
+    let tagged_agent: Option<&mut Agent> = agents.iter_mut().find(|agent| {
+        // find an agent that's within distance 2 of the tagging agent and isn't the tagging agent
+        agent.id != tagging_agent_id && agent.position.distance(&tagging_agent_position) < 2
+    });
+
+    if let Some(agent) = tagged_agent {
+        agent.is_it = true;
+        agents.get_mut(tagging_agent_id).unwrap().is_it = false;
+    }
+    agents
 }
 
 fn create_agents(settings: &Settings) -> Vec<Agent> {
@@ -94,8 +121,9 @@ fn create_agents(settings: &Settings) -> Vec<Agent> {
     let mut rng = rand::thread_rng();
 
     // create a Vector of agents
-    let mut agents: Vec<_> = (0..settings.number_of_agents)
-        .map(|_| Agent {
+    let mut agents: Vec<_> = (0..settings.number_of_agents as usize)
+        .map(|id| Agent {
+            id,
             position: Position {
                 x: rng.gen_range(0..settings.width),
                 y: rng.gen_range(0..settings.height),
@@ -109,4 +137,54 @@ fn create_agents(settings: &Settings) -> Vec<Agent> {
     // Set the first agent as 'It'
     agents.get_mut(0).unwrap().is_it = true;
     agents
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_position_distance() {
+        assert_eq!(
+            Position { x: 1, y: 1 }.distance(&Position { x: 0, y: 0 }),
+            2
+        );
+        assert_eq!(
+            Position { x: 0, y: 1 }.distance(&Position { x: 0, y: 0 }),
+            1
+        );
+        assert_eq!(
+            Position { x: 1, y: 1 }.distance(&Position { x: 2, y: 2 }),
+            2
+        );
+        assert_eq!(
+            Position { x: 1, y: 1 }.distance(&Position { x: 1, y: 1 }),
+            0
+        );
+    }
+
+    #[test]
+    fn test_make_agents_tag() {
+        let mut agents = vec![
+            Agent {
+                id: 0,
+                position: Position { x: 1, y: 1 },
+                is_it: true,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 1,
+                position: Position { x: 0, y: 1 },
+                is_it: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+        ];
+
+        agents = make_agents_tag(agents);
+
+        assert!(!agents[0].is_it, "Expecting agent 0 to not be it");
+        assert!(agents[1].is_it, "Expecting agent 1 to be it");
+    }
 }
