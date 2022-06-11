@@ -187,4 +187,62 @@ mod tests {
         assert!(!agents[0].is_it, "Expecting agent 0 to not be it");
         assert!(agents[1].is_it, "Expecting agent 1 to be it");
     }
+
+    #[test]
+    fn test_make_agents_tag_two_targets() {
+        let mut agents = vec![
+            Agent {
+                id: 0,
+                position: Position { x: 1, y: 1 },
+                is_it: true,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 1,
+                position: Position { x: 0, y: 1 },
+                is_it: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 2,
+                position: Position { x: 0, y: 1 },
+                is_it: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+        ];
+
+        agents = make_agents_tag(agents);
+
+        // count the agents that are 'It'
+        agents = agents.into_iter().filter(|agent| agent.is_it).collect();
+        assert_eq!(agents.len(), 1, "Only expecting 1 agent to be it");
+    }
+
+    #[test]
+    fn test_make_agents_tag_no_target() {
+        let mut agents = vec![
+            Agent {
+                id: 0,
+                position: Position { x: 1, y: 1 },
+                is_it: true,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 1,
+                position: Position { x: 0, y: 0 },
+                is_it: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+        ];
+
+        agents = make_agents_tag(agents);
+
+        assert!(agents[0].is_it, "Expecting agent 0 to still be it");
+        assert!(!agents[1].is_it, "Expecting agent 1 to still not be it");
+    }
 }
