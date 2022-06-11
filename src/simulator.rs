@@ -1,11 +1,34 @@
+use super::display;
 use super::Settings;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
+pub fn simulate(settings: Settings) {
+    let mut agents = create_agents(&settings);
+
+    display::init(&settings);
+    display::show(&agents, &settings);
+
+    for _ in 0..settings.simulation_steps {
+        // all agents take an action
+        agents = agents
+            .into_iter()
+            .map(|agent| {
+                let action = agent.decide_action();
+                agent.execute_action(action)
+            })
+            .collect();
+
+        // check whether the tagging agent is close enough to any other agent
+        agents = make_agents_tag(agents);
+
+        display::show(&agents, &settings);
+    }
+}
 #[derive(Debug, Clone, Copy)]
-struct Position {
-    x: u32,
-    y: u32,
+pub struct Position {
+    pub x: u32,
+    pub y: u32,
 }
 
 impl Position {
@@ -15,10 +38,10 @@ impl Position {
 }
 
 #[derive(Debug)]
-struct Agent {
+pub struct Agent {
     id: usize, // id also denotes position in the vector
-    position: Position,
-    is_it: bool,
+    pub position: Position,
+    pub is_it: bool,
     x_bound: u32, // upper bound, lower bound is 0
     y_bound: u32, // upper bound, lower bound is 0
 }
@@ -70,30 +93,6 @@ impl Distribution<Action> for Standard {
             3 => Action::Down,
             _ => Action::Left,
         }
-    }
-}
-
-pub fn simulate(settings: Settings) {
-    let mut agents = create_agents(&settings);
-
-    for _ in 0..settings.simulation_steps {
-        for agent in &agents {
-            println!("{:?}", agent);
-        }
-        // all agents take an action
-        agents = agents
-            .into_iter()
-            .map(|agent| {
-                let action = agent.decide_action();
-                agent.execute_action(action)
-            })
-            .collect();
-
-        // check whether the tagging agent is close enough to any other agent
-        agents = make_agents_tag(agents);
-    }
-    for agent in &agents {
-        println!("{:?}", agent);
     }
 }
 

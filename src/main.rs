@@ -1,5 +1,7 @@
+extern crate console;
 extern crate rand;
 
+mod display;
 mod simulator;
 
 pub struct Settings {
