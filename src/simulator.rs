@@ -50,6 +50,7 @@ pub struct Agent {
     id: usize, // id also denotes position in the vector
     pub position: Position,
     pub is_it: bool,
+    has_immunity: bool,
     x_bound: u32, // upper bound, lower bound is 0
     y_bound: u32, // upper bound, lower bound is 0
 }
@@ -113,12 +114,24 @@ fn make_agents_tag(mut agents: Vec<Agent>) -> Vec<Agent> {
 
     let tagged_agent: Option<&mut Agent> = agents.iter_mut().find(|agent| {
         // find an agent that's within distance 2 of the tagging agent and isn't the tagging agent
-        agent.id != tagging_agent_id && agent.position.distance(&tagging_agent_position) < 2
+        let not_the_tagging_agent = agent.id != tagging_agent_id;
+        let agent_close_enough = agent.position.distance(&tagging_agent_position) < 2;
+        let agent_not_immune = !agent.has_immunity;
+        not_the_tagging_agent && agent_not_immune && agent_close_enough
     });
 
     if let Some(agent) = tagged_agent {
         agent.is_it = true;
-        agents.get_mut(tagging_agent_id).unwrap().is_it = false;
+
+        // look for an immune agent to make sure it loses that immunity
+        if let Some(immune_agent) = agents.iter_mut().find(|agent| agent.has_immunity) {
+            immune_agent.has_immunity = false;
+        }
+
+        // the tagging_agent will not be 'It' anymore and has immunity until another tag
+        let mut tagging_agent = agents.get_mut(tagging_agent_id).unwrap();
+        tagging_agent.is_it = false;
+        tagging_agent.has_immunity = true;
     }
     agents
 }
@@ -136,6 +149,7 @@ fn create_agents(settings: &Settings) -> Vec<Agent> {
                 y: rng.gen_range(0..settings.height),
             },
             is_it: false,
+            has_immunity: false,
             x_bound: settings.width,
             y_bound: settings.height,
         })
@@ -177,6 +191,7 @@ mod tests {
                 id: 0,
                 position: Position { x: 1, y: 1 },
                 is_it: true,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -184,6 +199,7 @@ mod tests {
                 id: 1,
                 position: Position { x: 0, y: 1 },
                 is_it: false,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -193,6 +209,7 @@ mod tests {
 
         assert!(!agents[0].is_it, "Expecting agent 0 to not be it");
         assert!(agents[1].is_it, "Expecting agent 1 to be it");
+        assert!(agents[0].has_immunity, "Expecting agent 0 to have immunity");
     }
 
     #[test]
@@ -202,6 +219,7 @@ mod tests {
                 id: 0,
                 position: Position { x: 1, y: 1 },
                 is_it: true,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -209,6 +227,7 @@ mod tests {
                 id: 1,
                 position: Position { x: 0, y: 1 },
                 is_it: false,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -216,6 +235,7 @@ mod tests {
                 id: 2,
                 position: Position { x: 0, y: 1 },
                 is_it: false,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -235,6 +255,7 @@ mod tests {
                 id: 0,
                 position: Position { x: 1, y: 1 },
                 is_it: true,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -242,6 +263,7 @@ mod tests {
                 id: 1,
                 position: Position { x: 0, y: 0 },
                 is_it: false,
+                has_immunity: false,
                 x_bound: 10,
                 y_bound: 10,
             },
@@ -251,5 +273,77 @@ mod tests {
 
         assert!(agents[0].is_it, "Expecting agent 0 to still be it");
         assert!(!agents[1].is_it, "Expecting agent 1 to still not be it");
+    }
+
+    #[test]
+    fn test_make_agents_tag_has_immunity() {
+        let mut agents = vec![
+            Agent {
+                id: 0,
+                position: Position { x: 1, y: 1 },
+                is_it: true,
+                has_immunity: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 1,
+                position: Position { x: 1, y: 0 },
+                is_it: false,
+                has_immunity: true,
+                x_bound: 10,
+                y_bound: 10,
+            },
+        ];
+
+        agents = make_agents_tag(agents);
+
+        assert!(agents[0].is_it, "Expecting agent 0 to still be it");
+        assert!(!agents[1].is_it, "Expecting agent 1 to still not be it");
+    }
+
+    #[test]
+    fn test_make_agents_tag_has_immunity_two_targets() {
+        let mut agents = vec![
+            Agent {
+                id: 0,
+                position: Position { x: 1, y: 1 },
+                is_it: true,
+                has_immunity: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 1,
+                position: Position { x: 1, y: 0 },
+                is_it: false,
+                has_immunity: true,
+                x_bound: 10,
+                y_bound: 10,
+            },
+            Agent {
+                id: 1,
+                position: Position { x: 0, y: 1 },
+                is_it: false,
+                has_immunity: false,
+                x_bound: 10,
+                y_bound: 10,
+            },
+        ];
+
+        agents = make_agents_tag(agents);
+
+        assert!(!agents[0].is_it, "Expecting agent 0 to not be it");
+        assert!(!agents[1].is_it, "Expecting agent 1 to not be it");
+        assert!(agents[2].is_it, "Expecting agent 2 to be it");
+        assert!(agents[0].has_immunity, "Expecting agent 0 to have immunity");
+        assert!(
+            !agents[1].has_immunity,
+            "Expecting agent 1 to not have immunity"
+        );
+        assert!(
+            !agents[2].has_immunity,
+            "Expecting agent 2 to not have immunity"
+        );
     }
 }
