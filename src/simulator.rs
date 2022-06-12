@@ -8,8 +8,12 @@ use std::time::Duration;
 
 pub fn simulate(settings: Settings) {
     let py_simple = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/python/simple.py"));
+    let py_utils = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/python/utils.py"));
     let gil = Python::acquire_gil();
     let py = gil.python();
+
+    // load the utils module
+    PyModule::from_code(py, py_utils, "utils", "utils").unwrap();
     let simple_decide_action: Py<PyAny> = PyModule::from_code(py, py_simple, "", "")
         .unwrap()
         .getattr("decide_action")

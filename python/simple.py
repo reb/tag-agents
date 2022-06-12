@@ -1,2 +1,5 @@
+from utils import Action
+
+
 def decide_action():
-    return 1
+    return Action.Random.value
