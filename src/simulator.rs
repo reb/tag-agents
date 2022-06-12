@@ -13,12 +13,14 @@ pub fn simulate(settings: Settings) {
 
     for _ in 0..settings.length {
         // all agents take an action
+        let actions: Vec<Action> = agents
+            .iter()
+            .map(|agent| agent.decide_action(&agents))
+            .collect();
         agents = agents
             .into_iter()
-            .map(|agent| {
-                let action = agent.decide_action();
-                agent.execute_action(action)
-            })
+            .zip(actions.into_iter())
+            .map(|(agent, action)| agent.execute_action(action))
             .collect();
 
         // check whether the tagging agent is close enough to any other agent
@@ -54,9 +56,57 @@ pub struct Agent {
 }
 
 impl Agent {
-    fn decide_action(&self) -> Action {
-        // return a random move
-        rand::random()
+    fn decide_action(&self, agents: &Vec<Agent>) -> Action {
+        match self.is_it {
+            true => {
+                // find closest agent that's not immune or itself
+                let closest_agent = agents
+                    .iter()
+                    .filter(|agent| !agent.has_immunity && !(agent.id == self.id))
+                    .min_by_key(|agent| agent.position.distance(&self.position))
+                    .expect("Expected there to be another agent");
+                if self.position.x.abs_diff(closest_agent.position.x)
+                    >= self.position.y.abs_diff(closest_agent.position.y)
+                {
+                    if self.position.x >= closest_agent.position.x {
+                        Action::Left
+                    } else {
+                        Action::Right
+                    }
+                } else {
+                    if self.position.y >= closest_agent.position.y {
+                        Action::Up
+                    } else {
+                        Action::Down
+                    }
+                }
+            }
+            false => {
+                // find tagging agent
+                let tagging_agent = agents
+                    .iter()
+                    .find(|agent| agent.is_it)
+                    .expect("Expected there to be a tagging agent");
+                if self.position.distance(&tagging_agent.position) > 4 {
+                    return rand::random();
+                }
+                if self.position.x.abs_diff(tagging_agent.position.x)
+                    < self.position.y.abs_diff(tagging_agent.position.y)
+                {
+                    if self.position.x < tagging_agent.position.x {
+                        Action::Left
+                    } else {
+                        Action::Right
+                    }
+                } else {
+                    if self.position.y < tagging_agent.position.y {
+                        Action::Up
+                    } else {
+                        Action::Down
+                    }
+                }
+            }
+        }
     }
 
     fn execute_action(mut self, action: Action) -> Self {
