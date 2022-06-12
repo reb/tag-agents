@@ -9,3 +9,10 @@ class Action(enum.Enum):
     Down = 3
     Left = 4
     Random = 255
+
+
+def distance(a, b):
+    a_x, a_y = a
+    b_x, b_y = b
+
+    return abs(a_x - b_x) + abs(a_y - b_y)

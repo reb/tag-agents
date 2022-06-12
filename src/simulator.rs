@@ -1,6 +1,7 @@
 use super::display;
 use super::Settings;
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::thread;
@@ -26,12 +27,29 @@ pub fn simulate(settings: Settings) {
     display::show(&agents, &settings);
 
     for _ in 0..settings.length {
+        // grab the tagging agent's position to pass as an argument
+        let tagging_agent_position = agents
+            .iter()
+            .find(|agent| agent.is_it)
+            .map(|agent| agent.position)
+            .unwrap();
+
         // all agents take an action
         let actions: Vec<Action> = agents
             .iter()
-            .map(|_agent| {
+            .map(|agent| {
+                let kwargs = PyDict::new(py);
+
+                kwargs.set_item("is_it", agent.is_it).ok();
+                kwargs.set_item("position", agent.position.as_tuple()).ok();
+                kwargs
+                    .set_item("tagging_agent_position", tagging_agent_position.as_tuple())
+                    .ok();
+                // TODO: pass all other agent positions
+
+                // match the result from the python module back to the Rust enum
                 match simple_decide_action
-                    .call0(py)
+                    .call(py, (), Some(kwargs))
                     .unwrap()
                     .extract::<u8>(py)
                     .unwrap()
@@ -70,6 +88,10 @@ pub struct Position {
 impl Position {
     fn distance(&self, other: &Self) -> u32 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
+    }
+
+    fn as_tuple(&self) -> (u32, u32) {
+        (self.x, self.y)
     }
 }
 
