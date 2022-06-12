@@ -10,3 +10,4 @@ description  = "Simulate a multi agent system playing tag"
 rand = "0.8.5"
 console = "0.15.0"
 clap = { version = "3.1.18", features = ["derive"] }
+pyo3 = { version = "0.16.5", features = ["auto-initialize"] }

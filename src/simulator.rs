@@ -1,11 +1,21 @@
 use super::display;
 use super::Settings;
+use pyo3::prelude::*;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use std::thread;
 use std::time::Duration;
 
 pub fn simulate(settings: Settings) {
+    let py_simple = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/python/simple.py"));
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let simple_decide_action: Py<PyAny> = PyModule::from_code(py, py_simple, "", "")
+        .unwrap()
+        .getattr("decide_action")
+        .unwrap()
+        .into();
+
     let mut agents = create_agents(&settings);
 
     display::init(&settings);
@@ -15,7 +25,21 @@ pub fn simulate(settings: Settings) {
         // all agents take an action
         let actions: Vec<Action> = agents
             .iter()
-            .map(|agent| agent.decide_action(&agents))
+            .map(|_agent| {
+                match simple_decide_action
+                    .call0(py)
+                    .unwrap()
+                    .extract::<u8>(py)
+                    .unwrap()
+                {
+                    0 => Action::Stay,
+                    1 => Action::Up,
+                    2 => Action::Right,
+                    3 => Action::Down,
+                    4 => Action::Left,
+                    _ => rand::random(),
+                }
+            })
             .collect();
         agents = agents
             .into_iter()

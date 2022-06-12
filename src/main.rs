@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate console;
+extern crate pyo3;
 extern crate rand;
 
 mod display;
